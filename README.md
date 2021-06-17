@@ -123,6 +123,9 @@ Ao deletar o pod, um novo pod vai ser recriado no lugar, aguarde o pode reinicia
 Para manter nossas alterações, vamos fazer deploy de um banco de dados, vamos usar o MySQL, que pode ser criado, através de um template, usando o comando:
 
 ```
+# Crie um novo projeto
+oc new-project mysql-user<numero do usuário>
+
 # Para verificar as variáveis que podemos usar no template
 oc process openshift//mysql-persistent --parameters
 
