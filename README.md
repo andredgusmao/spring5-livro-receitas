@@ -94,7 +94,7 @@ oc new-project projeto-user<TROCAR PARA O NUMERO DO USER>
 Para realizar o primeiro deploy da nossa aplicação vamos usar o comando:
 
 ```
-oc new-app --name=livro-receitas --labels app=livroreceita redhat-openjdk18-openshift:1.8~https://github.com/andredgusmao/spring5-livro-receitas.git
+oc new-app --name=livro-receitas --labels app=livroreceitas redhat-openjdk18-openshift:1.8~https://github.com/andredgusmao/spring5-livro-receitas.git
 
 # Criando uma rota para acessarmos a aplicação
 oc expose svc/livro-receitas
@@ -127,7 +127,7 @@ Para manter nossas alterações, vamos fazer deploy de um banco de dados, vamos 
 oc process openshift//mysql-persistent --parameters
 
 # Para fazer o deploy do MySQL
-oc process openshift//mysql-persistent MEMORY_LIMIT=1Gi MYSQL_USER=myuser MYSQL_PASSWORD=r3dh4t1! MYSQL_ROOT_PASSWORD=r3dh4t1! MYSQL_DATABASE=livroreceita VOLUME_CAPACITY=2Gi | oc create -f -
+oc process openshift//mysql-persistent MEMORY_LIMIT=1Gi MYSQL_USER=myuser MYSQL_PASSWORD=r3dh4t1! MYSQL_ROOT_PASSWORD=r3dh4t1! MYSQL_DATABASE=livroreceitas VOLUME_CAPACITY=2Gi | oc create -f -
 ```
 
 Após o deploy do MySQL, vamos conectar nossa aplicação a ele.
@@ -144,14 +144,38 @@ spring.datasource.hikari.idle-timeout=10000
 spring.datasource.hikari.minimum-idle=2
 ```
 
+E no arquivo `pom.xml` vamos adicionar a dependência do driver do MySQL
+
+```xml
+<!-- MySQL -->
+<dependency>
+    <groupId>mysql</groupId>
+    <artifactId>mysql-connector-java</artifactId>
+</dependency>
+```
+
 Agora vamos recriar nosso projeto
 
 ```
 # Apagando os objetos que foram criados com o app
-oc delete all --selector app=livroreceita
+oc delete all --selector app=livroreceitas
 
 # Criando a nova versão (agora usando uma branch do git que contém as configurações de conexão com o MySQL
-oc new-app --name=livro-receitas --labels app=livroreceita redhat-openjdk18-openshift:1.8~https://github.com/andredgusmao/spring5-livro-receitas.git#mysql
+oc new-app --name=livro-receitas --labels app=livroreceitas redhat-openjdk18-openshift:1.8~https://github.com/andredgusmao/spring5-livro-receitas.git#mysql
+
+# Criando nossos arquivos de configuração
+oc apply -f src/main/resources/openshift/config-map.yaml 
+
+oc apply -f src/main/resources/openshift/secret.yaml 
+
+# Conectando nosso deployment aos arquivos criados
+oc set env --from=configmap/app-config dc/livro-receitas
+oc set env --from=secret/app-config dc/livro-receitas
+
+# Setando quota e limite de recursos para o deployment 
+oc set resources deployment livro-receitas --limits=cpu=500m,memory=256Mi --requests=cpu=200m,memory=128Mi
+# Caso o comando acima falhe
+# oc set resources dc/livro-receitas --limits=cpu=500m,memory=256Mi --requests=cpu=200m,memory=128Mi
 
 # Criando uma rota para acessarmos a aplicação
 oc expose svc/livro-receitas
@@ -159,8 +183,6 @@ oc expose svc/livro-receitas
 # Esse comando mostra a url da nossa aplicação
 oc get -o template route livro-receitas --template={{.spec.host}}
 ```
-
-
 ## Vamos validar a carga na nossa aplicação
 
 Vamos baixar o Baton, para testes de performance: https://github.com/americanexpress/baton/releases
@@ -168,9 +190,12 @@ Vamos baixar o Baton, para testes de performance: https://github.com/americanexp
 E executar o seguinte comando:
 
 ```sh
-./baton -u http://livro-receitas-projeto-user1.apps.cluster-ufrpe-8327.ufrpe-8327.example.opentlc.com/recipe/1/show -c 1000 -t 300
+./baton -u http://livro-receitas-teste2.apps.cluster-ufrpe-1911.ufrpe-1911.example.opentlc.com/recipe/1/show -c 1000 -t 60
 
 Onde -c é o numero de usuarios simulados fazendo requisição
 E -t o tempo, em segundos, que esses usuários vão fazer requisições
 ```
 
+## Realizando nosso teste AB
+
+Para montar o teste AB vamos 
