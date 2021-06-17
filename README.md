@@ -73,13 +73,14 @@ App: http://localhost:8080
 
 Vamos logar no openshift e fazer nosso primeiro deploy.
 
-Para acessar o Openshift no navegador a url do openshift é: https://console-openshift-console.apps.cluster-ufrpe-8327.ufrpe-8327.example.opentlc.com
+Para acessar o Openshift no navegador a url do openshift é: https://console-openshift-console.apps.cluster-ufrpe-1911.ufrpe-1911.example.opentlc.com
+
 Para baixar o client 'oc' pode usar a url: http://d3s3zqyaz8cp2d.cloudfront.net/pub/openshift-v4/clients/ocp/4.6.3/openshift-client-linux-4.6.3.tar.gz
 
 Para logar no Openshift vamos usar o comando
 
 ```
-oc login https://api.cluster-ufrpe-8327.ufrpe-8327.example.opentlc.com:6443 --username=user<TROCAR PARA O NUMERO DO USER>
+oc login https://api.cluster-ufrpe-1911.ufrpe-1911.example.opentlc.com:6443 --username=user<TROCAR PARA O NUMERO DO USER>
 ```
 
 Para criar o projeto use o comando:
@@ -93,10 +94,72 @@ oc new-project projeto-user<TROCAR PARA O NUMERO DO USER>
 Para realizar o primeiro deploy da nossa aplicação vamos usar o comando:
 
 ```
-oc new-app --name=livro-receitas --labels app=spring redhat-openjdk18-openshift:1.8~https://github.com/andredgusmao/spring5-livro-receitas.git
+oc new-app --name=livro-receitas --labels app=livroreceita redhat-openjdk18-openshift:1.8~https://github.com/andredgusmao/spring5-livro-receitas.git
 
-oc expose svc/livro-receitas 
+# Criando uma rota para acessarmos a aplicação
+oc expose svc/livro-receitas
+
+# Esse comando mostra a url da nossa aplicação
+oc get -o template route livro-receitas --template={{.spec.host}}
 ```
+
+Com a url é só abrir no navegador a nossa aplicação.
+
+
+## Conectando nossa aplicação ao um banco de dados
+
+A aplicação está funcionando com um banco de dados embarcado. Vamos ver no que isso impacta, entre na aplicação, modifique as receitas (também pode ser as notas ou os ingredientes). Após modificação execute o comando:
+
+```
+oc get po
+
+# procure o pod com o nome iniciando com 'livro-receitas' e com status 'running'.
+
+oc delete po <nome do pod>
+```
+
+Ao deletar o pod, um novo pod vai ser recriado no lugar, aguarde o pode reiniciar e acesse a aplicação. As modificações que fizemos foram revertidas.
+
+Para manter nossas alterações, vamos fazer deploy de um banco de dados, vamos usar o MySQL, que pode ser criado, através de um template, usando o comando:
+
+```
+# Para verificar as variáveis que podemos usar no template
+oc process openshift//mysql-persistent --parameters
+
+# Para fazer o deploy do MySQL
+oc process openshift//mysql-persistent MEMORY_LIMIT=1Gi MYSQL_USER=myuser MYSQL_PASSWORD=r3dh4t1! MYSQL_ROOT_PASSWORD=r3dh4t1! MYSQL_DATABASE=livroreceita VOLUME_CAPACITY=2Gi | oc create -f -
+```
+
+Após o deploy do MySQL, vamos conectar nossa aplicação a ele.
+
+Na nossa aplicação vamos adicionar algumas propriedades no arquivo em `src/main/resources/application.properties` 
+
+```
+spring.datasource.url=jdbc:mysql://mysql:3306/livroreceita
+spring.datasource.username=user-errado
+spring.datasource.password=r3dh4t1!
+spring.datasource.hikari.connection-timeout=5000
+spring.datasource.hikari.maximum-pool-size=10
+spring.datasource.hikari.idle-timeout=10000
+spring.datasource.hikari.minimum-idle=2
+```
+
+Agora vamos recriar nosso projeto
+
+```
+# Apagando os objetos que foram criados com o app
+oc delete all --selector app=livroreceita
+
+# Criando a nova versão (agora usando uma branch do git que contém as configurações de conexão com o MySQL
+oc new-app --name=livro-receitas --labels app=livroreceita redhat-openjdk18-openshift:1.8~https://github.com/andredgusmao/spring5-livro-receitas.git#mysql
+
+# Criando uma rota para acessarmos a aplicação
+oc expose svc/livro-receitas
+
+# Esse comando mostra a url da nossa aplicação
+oc get -o template route livro-receitas --template={{.spec.host}}
+```
+
 
 ## Vamos validar a carga na nossa aplicação
 
@@ -110,3 +173,4 @@ E executar o seguinte comando:
 Onde -c é o numero de usuarios simulados fazendo requisição
 E -t o tempo, em segundos, que esses usuários vão fazer requisições
 ```
+
