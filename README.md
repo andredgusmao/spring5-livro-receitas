@@ -177,6 +177,16 @@ oc set resources deployment livro-receitas --limits=cpu=500m,memory=256Mi --requ
 # Caso o comando acima falhe
 # oc set resources dc/livro-receitas --limits=cpu=500m,memory=256Mi --requests=cpu=200m,memory=128Mi
 
+# Setando verificações se o pod está rodando
+oc set probe dc/livro-receitas --readiness --get-url=http://:8080/actuator/health/readiness
+oc set probe dc/livro-receitas --liveness --get-url=http://:8080/actuator/health/liveness 
+
+# Configurando a escalabilidade automatica
+oc autoscale dc/livro-receitas --min 1 --max 10 --cpu-percent=90
+
+# Validando configuração
+oc describe hpa/livro-receitas
+
 # Criando uma rota para acessarmos a aplicação
 oc expose svc/livro-receitas
 
