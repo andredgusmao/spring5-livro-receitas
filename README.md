@@ -69,6 +69,8 @@ H2: http://localhost:8080/h2-console
 App: http://localhost:8080
 ```
 
+## 1 - Primeiro Projeto
+
 ## Criando nosso projeto no Openshift
 
 Vamos logar no openshift e fazer nosso primeiro deploy.
@@ -86,7 +88,7 @@ oc login https://api.cluster-ufrpe-1911.ufrpe-1911.example.opentlc.com:6443 --us
 Para criar o projeto use o comando:
 
 ```
-oc new-project projeto-user<TROCAR PARA O NUMERO DO USER>
+oc new-project primeiro-user<TROCAR PARA O NUMERO DO USER>
 ```
 
 ## Nosso primeiro deploy no openshift
@@ -105,9 +107,6 @@ oc get -o template route livro-receitas --template={{.spec.host}}
 
 Com a url é só abrir no navegador a nossa aplicação.
 
-
-## Conectando nossa aplicação ao um banco de dados
-
 A aplicação está funcionando com um banco de dados embarcado. Vamos ver no que isso impacta, entre na aplicação, modifique as receitas (também pode ser as notas ou os ingredientes). Após modificação execute o comando:
 
 ```
@@ -119,6 +118,10 @@ oc delete po <nome do pod>
 ```
 
 Ao deletar o pod, um novo pod vai ser recriado no lugar, aguarde o pode reiniciar e acesse a aplicação. As modificações que fizemos foram revertidas.
+
+## 2 - Projeto conectando com o banco de dados
+
+## Conectando nossa aplicação ao um banco de dados
 
 Para manter nossas alterações, vamos fazer deploy de um banco de dados, vamos usar o MySQL, que pode ser criado, através de um template, usando o comando:
 
@@ -181,8 +184,8 @@ oc set resources deployment livro-receitas --limits=cpu=500m,memory=256Mi --requ
 # oc set resources dc/livro-receitas --limits=cpu=500m,memory=256Mi --requests=cpu=200m,memory=128Mi
 
 # Setando verificações se o pod está rodando
-oc set probe dc/livro-receitas --readiness --get-url=http://:8080/actuator/health/readiness
-oc set probe dc/livro-receitas --liveness --get-url=http://:8080/actuator/health/liveness 
+oc set probe dc/livro-receitas --readiness --get-url=http://:8080/actuator/health/readiness --initial-delay-seconds=5
+oc set probe dc/livro-receitas --liveness --get-url=http://:8080/actuator/health/liveness --initial-delay-seconds=5
 
 # Configurando a escalabilidade automatica
 oc autoscale dc/livro-receitas --min 1 --max 10 --cpu-percent=90
@@ -204,11 +207,15 @@ Vamos baixar o Baton, para testes de performance: https://github.com/americanexp
 E executar o seguinte comando:
 
 ```sh
-./baton -u http://livro-receitas-teste2.apps.cluster-ufrpe-1911.ufrpe-1911.example.opentlc.com/recipe/1/show -c 1000 -t 60
+./baton -u http://livro-receitas-teste2.apps.cluster-ufrpe-1911.ufrpe-1911.example.opentlc.com/recipe/1/show -c 100 -t 10
 
 Onde -c é o numero de usuarios simulados fazendo requisição
 E -t o tempo, em segundos, que esses usuários vão fazer requisições
 ```
+
+Continue fazendo os testes e modificando os recursos disponíveis para a sua aplicação de forma que ele suporte uma carga consideravel (10.000 - 1.000.000) de usuários.
+
+## 3 - Projeto teste A/B
 
 ## Realizando nosso teste AB
 
