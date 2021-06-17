@@ -14,7 +14,7 @@ git clone https://github.com/andredgusmao/spring5-livro-receitas.git
 Vamos construir nossa aplicação e testar localmente, na pasta do projeto executar o seguinte comando:
 
 ```
-mvn clean spring-boot:run
+mvn clean spring-boot:run -DskipTests
 ```
 
 Se correr tudo bem nossa aplicação deve conter um log similar a esse:
