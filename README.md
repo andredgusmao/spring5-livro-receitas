@@ -183,6 +183,7 @@ oc expose svc/livro-receitas
 # Esse comando mostra a url da nossa aplicação
 oc get -o template route livro-receitas --template={{.spec.host}}
 ```
+
 ## Vamos validar a carga na nossa aplicação
 
 Vamos baixar o Baton, para testes de performance: https://github.com/americanexpress/baton/releases
@@ -198,4 +199,30 @@ E -t o tempo, em segundos, que esses usuários vão fazer requisições
 
 ## Realizando nosso teste AB
 
-Para montar o teste AB vamos 
+Para montar o teste AB vamos criar um novo projeto, fazer o deploy de duas versões da aplicação e criar uma configuração de distribuição dos nossos usuários entre as versões
+
+```
+# Criando um novo projeto
+oc new-project testeab-user<numero do user>
+
+# Fazendo deploy da nossa primeira versão 
+oc new-app --name=livro-receitas --labels app=livroreceitas redhat-openjdk18-openshift:1.8~https://github.com/andredgusmao/spring5-livro-receitas.git
+
+# Criando uma rota para acessarmos a aplicação
+oc expose svc/livro-receitas
+
+# Fazendo deploy da segunda versão
+oc new-app --name=livro-receitas-b --labels app=livroreceitas redhat-openjdk18-openshift:1.8~https://github.com/andredgusmao/spring5-livro-receitas.git#testeab 
+
+# Balanceamento de rotas
+oc set route-backends livro-receitas livro-receitas=80 livro-receitas-b=20
+
+# Para consultar como está nosso balanceamento
+oc set route-backends livro-receitas
+
+#Para mudar o balanceamento podemos usar o comando
+oc set route-backends livro-receitas --adjust livro-receitas-b=+40%
+```
+
+Agora é só testar em diferentes navegadores.
+ 
